@@ -1,0 +1,29 @@
+# Code owners.
+#
+# Branch protection requires a code owner's approval, which is what keeps the
+# human in the loop at the review gate. An agent can open a pull request and
+# drive it green; it cannot approve one. That separation of duties is the point
+# — the thing that wrote the code has no route to merging it.
+
+# Everything, by default.
+*                           @ragmha
+
+# The configuration that steers the agents. A change here changes how every
+# future session behaves, so it deserves the same scrutiny as the code it
+# produces — arguably more.
+/.github/copilot-instructions.md  @ragmha
+/AGENTS.md                        @ragmha
+/.github/skills/                  @ragmha
+/.github/agents/                  @ragmha
+/REVIEW.md                        @ragmha
+
+# The gates themselves.
+/.github/workflows/         @ragmha
+/monitoring/bands.yaml      @ragmha
+/lefthook.yml               @ragmha
+
+# The artifact chain. These are the audit trail; they should never change
+# quietly after the fact.
+/intent/                    @ragmha
+/spec/                      @ragmha
+/plan/                      @ragmha
