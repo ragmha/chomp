@@ -157,27 +157,59 @@ Also show `.github/agents/verifier.md`:
 
 The strongest beat. Two live moments, both fast.
 
-### 5a — Push protection (90 seconds)
+### 5a — Layered guardrails, then push protection (2 min)
+
+This is a three-act beat, and each act fails one layer further out. It maps
+exactly onto the table in `spec/0001-chomp.md` §5 — worth having open.
+
+**Act 1 — the local hook stops you.**
 
 ```bash
 git checkout -b demo/secret
-cat >> src/config.ts <<'EOF'
-// Demo only — this is a fake, revoked token.
+cat > src/config.ts <<'EOF'
 const GITHUB_TOKEN = "ghp_S0meFakeT0kenF0rTheDem0AAAAAAAAAAAA";
 EOF
-git add -A && git commit -m "chore: add config" && git push origin demo/secret
+git add -A && git commit -m "chore: add config"
 ```
 
-The push is **rejected**. Read the error aloud.
+lefthook rejects it — eslint flags the unused variable before the commit is
+even made.
 
-> "That secret never entered the repository's history. Not caught in review —
-> blocked at the push. The playbook's answer here is a deny rule on reading
-> `.env` files, which is weaker: it stops the agent reading a secret, not a
-> human committing one."
+> "That's the machine layer. Useful, and completely bypassable."
+
+**Act 2 — bypass it.**
+
+```bash
+git commit --no-verify -m "chore: add config"
+```
+
+Commit succeeds.
+
+> "Every local hook has a `--no-verify`. Claude Code's `PreToolUse` hook has
+> the same property — it runs on the machine the agent runs on. If your control
+> lives there, a determined person or a confused agent gets past it."
+
+**Act 3 — push protection stops you anyway.**
+
+```bash
+git push origin demo/secret
+```
+
+**Rejected.** Read the error aloud.
+
+> "That one isn't running on my laptop. GitHub rejected the push server-side,
+> and the secret never entered the repository's history. Not caught in review —
+> never committed to the remote at all.
+>
+> Three layers, and only the third is one I can't switch off. That's the whole
+> argument about where to put a control."
 
 ```bash
 git reset --hard HEAD~1 && git checkout main && git branch -D demo/secret
 ```
+
+**If push protection doesn't fire:** don't retry live. Acts 1 and 2 still make
+the point on their own; show the Security settings page and move on.
 
 ### 5b — CodeQL and Autofix (4 min)
 
