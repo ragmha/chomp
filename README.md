@@ -75,7 +75,9 @@ engineer cannot switch off.
 
 ## The game
 
-TypeScript and HTML5 Canvas, built with Vite. No runtime dependencies.
+TypeScript and HTML5 Canvas, built with Vite. **Zero runtime dependencies**;
+the production bundle is ~27 kB (10 kB gzipped). The engine ships with
+87 passing unit tests across 6 files — no browser required.
 
 The engine is a **pure deterministic reducer** — `step(state, input) => state`
 with fixed-timestep integer physics and a seeded PRNG. No `Math.random`, no

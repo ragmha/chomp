@@ -147,4 +147,7 @@ commit that makes it.
 
 | Date | Departure | Why |
 |---|---|---|
-| — | — | — |
+| 2026-08-25 | `SECURITY.md` and `.github/CODEOWNERS` added; not in the plan's file list | Needed for GitHub's security-advisory flow and code-ownership enforcement — both fit the "secure" acceptance criterion |
+| 2026-08-25 | `.github/workflows/watchtower.yml` added; plan listed `tools/watchtower/**` but no workflow | The SDK service needs a scheduled trigger in CI to close the monitoring loop |
+| 2026-08-25 | `intent/TEMPLATE.md` added; not in the plan's file list | Provides a reusable starting point for the next intent artifact; no change to built code |
+| 2026-08-25 | `vitest` upgraded from `^2` to `^4` (`v4.1.11`); `vite.config.ts` unchanged | v2.x pinned `vite@5` internally, producing a critical CVE; v4 resolves it with no test-behaviour changes |
