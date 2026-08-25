@@ -57,7 +57,9 @@ jobs:
         run: npm ci
 
       - name: Install Copilot CLI
-        run: npm install -g @github/copilot
+        # Pinned: an unpinned global install is an unreviewed dependency
+        # entering CI on every run. Scorecard flags this, correctly.
+        run: npm install -g @github/copilot@1.0.80
         # If the install fails (e.g. package not yet public), the eval suite
         # will detect the missing binary and exit with code 2 (skip), not 1 (fail).
 
