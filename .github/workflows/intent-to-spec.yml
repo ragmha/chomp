@@ -1,0 +1,138 @@
+# The automated handoff from Stage 1 (Plan) to Stage 2 (Design).
+#
+# In the playbook, accepting an intent.md is what triggers the requirements and
+# design pass. This workflow is that trigger: a new intent/ file landing on
+# main fires a non-interactive Copilot run with the repo's skills loaded, and
+# the resulting spec/ arrives as a pull request.
+#
+# From that point the product owner's first involvement is the review, rather
+# than having to start the stage by hand. That is the whole change — the
+# handoff stops being a person remembering to do something.
+name: Intent → Spec
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'intent/*.md'
+      - '!intent/TEMPLATE.md'
+  workflow_dispatch:
+    inputs:
+      intent_file:
+        description: 'Path to the intent file to design against'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  design:
+    name: Produce spec from intent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      # Work out which intent arrived. On a push, that is whichever intent/
+      # file the commit added; on a manual run, whatever was asked for.
+      - name: Identify the intent
+        id: intent
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.intent_file }}" ]; then
+            file="${{ inputs.intent_file }}"
+          else
+            file=$(git diff --name-only --diff-filter=A HEAD~1 HEAD -- 'intent/*.md' \
+                   | grep -v TEMPLATE | head -1)
+          fi
+
+          if [ -z "$file" ] || [ ! -f "$file" ]; then
+            echo "No new intent file; nothing to design."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          slug=$(basename "$file" .md)
+          echo "found=true"           >> "$GITHUB_OUTPUT"
+          echo "file=$file"           >> "$GITHUB_OUTPUT"
+          echo "slug=$slug"           >> "$GITHUB_OUTPUT"
+          echo "spec=spec/$slug.md"   >> "$GITHUB_OUTPUT"
+          echo "Designing against $file"
+
+      - name: Install Copilot CLI
+        if: steps.intent.outputs.found == 'true'
+        run: npm install -g @github/copilot
+
+      # The skills in .github/skills are loaded as trusted configuration, so
+      # brand, security and accessibility policy is applied while the spec is
+      # written rather than discovered in a review two weeks later.
+      - name: Run the design pass
+        if: steps.intent.outputs.found == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COPILOT_ALLOW_ALL: '1'
+        run: |
+          copilot -p "Read ${{ steps.intent.outputs.file }} and produce a requirements and \
+          design spec for building it in this codebase. Apply the skills available to you so \
+          the design conforms to our game-feel, security and accessibility standards. Write it \
+          to ${{ steps.intent.outputs.spec }}, ready to hand to engineering.
+
+          Record a provenance block at the top listing this prompt and the skill versions in \
+          force. Answer every open question the intent raises, or carry it forward explicitly.
+
+          Describe clearly any areas of concern, especially where you cannot satisfy two \
+          policies at once — those are the points a human has to decide, and burying them is \
+          the one failure mode that matters here." \
+            --allow-all-tools \
+            --log-dir "$RUNNER_TEMP/copilot-logs"
+
+      - name: Open the spec as a pull request
+        if: steps.intent.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain spec/)" ]; then
+            echo "The design pass produced no spec. Failing loudly rather than silently."
+            exit 1
+          fi
+
+          branch="spec/${{ steps.intent.outputs.slug }}"
+          git config user.name  'copilot-design'
+          git config user.email 'copilot-design@users.noreply.github.com'
+          git checkout -b "$branch"
+          git add spec/
+          git commit -m "feat(spec): design pass for ${{ steps.intent.outputs.slug }}"
+          git push origin "$branch"
+
+          gh pr create \
+            --title "Spec: ${{ steps.intent.outputs.slug }}" \
+            --body "Design pass triggered by \`${{ steps.intent.outputs.file }}\` landing on main.
+
+          The product owner reviews this; they do not write it. Work through the flagged
+          concerns first — those are the points an analyst would have escalated, and they
+          need a decision from a named policy owner before engineering sees the spec.
+
+          Accepting this spec is what starts plan mode." \
+            --label from-design
+
+      # The session log is part of the audit trail: the prompt, the skills in
+      # force, and what the agent did with them.
+      - name: Upload session log
+        if: always() && steps.intent.outputs.found == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: design-session-log
+          path: ${{ runner.temp }}/copilot-logs
+          if-no-files-found: ignore
+          retention-days: 30
