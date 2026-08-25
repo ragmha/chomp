@@ -1,0 +1,357 @@
+/*
+ * CHOMP styles.
+ *
+ * Every rule lives here rather than in the document, because the CSP in
+ * index.html carries no 'unsafe-inline' — an inline <style> block or a
+ * style="" attribute would be dropped by the browser, not merely frowned at.
+ * secure-web-app rule 4.
+ *
+ * The bottom of the file honours prefers-reduced-motion (a11y-arcade rule 3).
+ * The palette mirrors src/render/sprites.ts, which is chosen for ≥4.5:1
+ * contrast and for deuteranopia/protanopia separability (rule 7).
+ */
+
+:root {
+  --bg: #05061a;
+  --bg-deep: #02030d;
+  --panel: #0b0e2a;
+  --panel-edge: #1d2450;
+  --wall: #3b4de0;
+  --text: #f2f5ff;
+  --muted: #9fb0d8;
+  --accent: #ffd23f;
+  --danger: #ff6b81;
+
+  --board-width: 448px;
+  --board-height: 496px;
+
+  --radius: 14px;
+  --font: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  padding: clamp(0.75rem, 3vw, 2rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    radial-gradient(120% 90% at 50% -10%, #141a4d 0%, rgba(5, 6, 26, 0) 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* a11y-arcade rule 4: present to assistive tech, invisible to everyone else. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- layout ------------------------------------------------------------- */
+
+.shell {
+  position: relative;
+  width: min(100%, var(--board-width));
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1.6vw, 0.9rem);
+}
+
+/* --- HUD ---------------------------------------------------------------- */
+
+.hud {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+
+  background: var(--panel-edge);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.hud__item {
+  margin: 0;
+  padding: 0.5rem 0.25rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  background: var(--panel);
+}
+
+.hud__label {
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  /* 9.2:1 against --panel. */
+  color: var(--muted);
+}
+
+.hud__value {
+  font-size: clamp(1.05rem, 4.4vw, 1.35rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+/* --- board -------------------------------------------------------------- */
+
+/* Positioning context for the overlay and the pause dialog. */
+.stage {
+  position: relative;
+  display: grid;
+}
+
+#board {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 448 / 496;
+
+  background: var(--bg);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 1px rgba(59, 77, 224, 0.18),
+    0 24px 60px -30px rgba(59, 77, 224, 0.9);
+
+  /* The art is pixel-grid aligned; let the browser scale it honestly. */
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+#board:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* --- overlay ------------------------------------------------------------ */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+
+  padding: 1.5rem;
+  text-align: center;
+
+  background:
+    radial-gradient(72% 48% at 50% 45%, rgba(5, 6, 26, 0.93) 0%, rgba(5, 6, 26, 0.62) 100%);
+  border-radius: var(--radius);
+  backdrop-filter: blur(1px) saturate(0.85);
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.overlay__title {
+  margin: 0;
+  font-size: clamp(2.5rem, 12vw, 3.75rem);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  color: var(--accent);
+  text-shadow: 0 0 24px rgba(255, 210, 63, 0.35);
+}
+
+.overlay__body {
+  margin: 0;
+  max-width: 24rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+kbd {
+  padding: 0.05em 0.4em;
+  border: 1px solid var(--panel-edge);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9em;
+}
+
+/* --- buttons ------------------------------------------------------------ */
+
+.button {
+  appearance: none;
+  padding: 0.6rem 1.5rem;
+  border: 0;
+  border-radius: 999px;
+
+  background: var(--accent);
+  /* #05061a on #ffd23f is 13.9:1. */
+  color: #05061a;
+
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.button:hover {
+  background: #ffde72;
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 3px;
+}
+
+.button--quiet {
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--panel-edge);
+}
+
+.button--quiet:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* --- pause dialog ------------------------------------------------------- */
+
+.dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  /* Dim enough to pull focus to the panel, light enough that the frozen board
+     is still readable — a pause you cannot see through is disorienting. */
+  background: rgba(2, 3, 13, 0.58);
+  backdrop-filter: blur(2px);
+}
+
+.dialog[hidden] {
+  display: none;
+}
+
+.dialog__panel {
+  width: min(100%, 20rem);
+  padding: 1.5rem;
+  text-align: center;
+
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow: 0 30px 70px -40px #000;
+}
+
+.dialog__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.dialog__body {
+  margin: 0 0 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+/* --- footer ------------------------------------------------------------- */
+
+.footer {
+  margin: 0;
+  text-align: center;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
+.footer p {
+  margin: 0;
+}
+
+.footer a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.footer a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- narrow screens ----------------------------------------------------- */
+
+@media (max-width: 30rem) {
+  .hud__item {
+    padding: 0.4rem 0.15rem 0.5rem;
+  }
+}
+
+/*
+ * a11y-arcade rule 3. The canvas has its own reduced-motion path in
+ * src/main.ts; this covers the chrome around it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .button:hover {
+    transform: none;
+  }
+}

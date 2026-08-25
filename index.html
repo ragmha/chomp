@@ -21,6 +21,13 @@
     <title>CHOMP</title>
     <meta name="description" content="A maze-chase arcade game, built as a working demo of an AI-native SDLC on GitHub." />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23ffd23f'/></svg>" />
+
+    <!--
+      Styles are linked as their own file rather than inlined. The CSP above
+      has no 'unsafe-inline', so a <style> block or a style="" attribute would
+      simply be dropped by the browser.
+    -->
+    <link rel="stylesheet" href="/src/style.css" />
   </head>
 
   <body>
@@ -33,25 +40,55 @@
       </header>
 
       <!--
-        a11y-arcade rule 5: the board is not a silent void. The label is kept
-        current with game state by src/a11y/announcer.ts.
+        The stage is the positioning context for the overlay and the pause
+        dialog, so both sit exactly over the board at any viewport width.
       -->
-      <canvas
-        id="board"
-        width="448"
-        height="496"
-        role="img"
-        aria-label="CHOMP maze. Game not started."
-      ></canvas>
+      <div class="stage">
+        <!--
+          a11y-arcade rule 5: the board is not a silent void. The label is kept
+          current with game state by src/a11y/announcer.ts.
+        -->
+        <canvas
+          id="board"
+          width="448"
+          height="496"
+          role="img"
+          tabindex="0"
+          aria-label="CHOMP maze. Game not started."
+        ></canvas>
+
+        <section id="overlay" class="overlay">
+          <h1 id="overlay-title" class="overlay__title">CHOMP</h1>
+          <p id="overlay-body" class="overlay__body">Arrows or WASD to move. <kbd>P</kbd> or <kbd>Esc</kbd> to pause.</p>
+          <button id="start" class="button" type="button">Start game</button>
+        </section>
+
+        <!--
+          a11y-arcade rule 6: pause is reachable from Escape and from P, focus
+          moves here when it opens, and src/main.ts traps Tab inside the dialog
+          until it is dismissed.
+        -->
+        <div
+          id="pause"
+          class="dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pause-title"
+          hidden
+        >
+          <div class="dialog__panel">
+            <h2 id="pause-title" class="dialog__title">Paused</h2>
+            <p class="dialog__body">The board is frozen. Nothing is chasing you.</p>
+            <div class="dialog__actions">
+              <button id="resume" class="button" type="button">Resume</button>
+              <button id="restart" class="button button--quiet" type="button">Restart</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- a11y-arcade rule 4: throttled to at most one announcement a second. -->
       <div id="announcer" class="visually-hidden" aria-live="polite" role="status"></div>
-
-      <section id="overlay" class="overlay">
-        <h1 class="overlay__title">CHOMP</h1>
-        <p class="overlay__body">Arrows or WASD to move. <kbd>P</kbd> or <kbd>Esc</kbd> to pause.</p>
-        <button id="start" class="button" type="button">Start game</button>
-      </section>
 
       <footer class="footer">
         <p>

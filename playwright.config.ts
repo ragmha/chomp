@@ -30,9 +30,10 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 
   // Tests run against the real production bundle, not the dev server, so what
-  // is verified is what ships.
+  // is verified is what ships. `--host 127.0.0.1` because `vite preview`
+  // otherwise binds to ::1 only, and the readiness probe below is IPv4.
   webServer: {
-    command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+    command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
