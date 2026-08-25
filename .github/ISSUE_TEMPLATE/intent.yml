@@ -1,0 +1,77 @@
+name: Intent
+description: Propose a change in your own words. No technical knowledge needed.
+title: "[intent] "
+labels: ["intent", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the front door to the [AI-native SDLC loop](https://claude.com/blog/the-ai-native-sdlc-playbook)
+        this repo runs.
+
+        You do **not** need to write a technical spec, estimate anything, or
+        know how the code works. Describe the problem in your own words. An
+        agent turns this into a `spec/` entry, a human reviews that, and it
+        goes from there.
+
+        Write it the way you'd explain it to a colleague.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the problem?
+      description: What can't you do today? Who does it affect, and how often?
+      placeholder: |
+        Players on a laptop trackpad can't play at all — the game only
+        responds to arrow keys, and there's no way to swipe or drag.
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What would better look like?
+      description: Describe the outcome, not the implementation.
+      placeholder: |
+        Someone on a trackpad or touchscreen can play a full game without
+        a keyboard.
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected
+    attributes:
+      label: Who and what does this touch?
+      description: People, systems, or parts of the game — as best you know.
+      placeholder: Mobile players, the input layer, probably the HUD.
+    validations:
+      required: false
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: Anything that must stay true. Budgets, policies, things not to break.
+      placeholder: |
+        Mustn't slow down keyboard play. No new runtime dependencies.
+    validations:
+      required: false
+
+  - type: textarea
+    id: questions
+    attributes:
+      label: Open questions
+      description: Anything you're unsure about. It's fine to leave these unresolved.
+      placeholder: Should a swipe turn immediately, or buffer like a keypress?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Before you file
+      options:
+        - label: This describes a problem or outcome, not a specific technical solution
+          required: true
+        - label: I'm happy for an agent to draft the spec, and for me to review it
+          required: true
