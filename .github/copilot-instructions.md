@@ -54,3 +54,23 @@ Never skip, delete or weaken a failing test to get green.
   front end.
 - Don't edit files under `src/gen/` or `*.lock.yml` — both are generated.
 - When implementation departs from `plan/`, update the plan in the same commit.
+- **Adding a dependency? Regenerate `package-lock.json` in the same commit.**
+  A desynced lock breaks `npm ci`, which fails every workflow at once.
+- **Playwright screenshots are per-platform.** A baseline written on macOS
+  (`-darwin.png`) will not satisfy CI, which runs Linux and wants
+  `-linux.png`. Generate the Linux one in the official container rather than
+  deleting the assertion:
+
+  ```bash
+  PWV=$(node -p "require('./node_modules/@playwright/test/package.json').version")
+  docker run --rm -v "$PWD":/work -v /work/node_modules -w /work --network host \
+    mcr.microsoft.com/playwright:v${PWV}-jammy \
+    bash -lc "npm ci && npx playwright test --update-snapshots"
+  ```
+
+  The bare `-v /work/node_modules` is load-bearing: it masks the host's
+  `node_modules` with an anonymous volume. Without it the container's
+  `npm ci` overwrites your macOS binaries with Linux ones and every local
+  command breaks until you reinstall.
+
+  Commit both baselines.
