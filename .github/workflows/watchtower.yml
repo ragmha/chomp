@@ -1,0 +1,110 @@
+# The Maintain stage, closing the loop.
+#
+# A trigger with no person in its path: on a schedule, the watchtower reads
+# this repo's own CI and deploy health, applies the deterministic control bands
+# in monitoring/bands.yaml, and only then decides whether to invoke an agent.
+#
+# Anything it finds is written as an intent/ entry and opened as a pull
+# request, so a maintenance discovery re-enters the same pipeline as any other
+# idea. People triage that work; they no longer have to start it.
+name: Watchtower
+
+on:
+  schedule:
+    # Every six hours. Frequent enough to catch drift, rare enough that the
+    # findings stay worth reading.
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Detect only — never invoke a model'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    name: Check control bands
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # to push the intent/ branch
+      pull-requests: write   # to open the finding as a PR
+      actions: read          # to read workflow run history
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      # The detector is pure and unit tested, so prove it still passes before
+      # trusting anything it says. A monitoring loop running on an untested
+      # detector is worse than no monitoring loop.
+      - name: Verify the detector
+        run: |
+          npm ci
+          npm run test:unit -- monitoring
+
+      - name: Install watchtower
+        working-directory: tools/watchtower
+        run: npm ci
+
+      - name: Check bands
+        id: watch
+        working-directory: tools/watchtower
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "false" ]; then
+            node --experimental-strip-types watchtower.ts --repo "$GITHUB_REPOSITORY" | tee out.log
+          else
+            node --experimental-strip-types watchtower.ts --repo "$GITHUB_REPOSITORY" --dry-run | tee out.log
+          fi
+          echo "findings=$(grep -c '^⚠' out.log || true)" >> "$GITHUB_OUTPUT"
+
+      # The OTel trace is the audit record: every tool call the agent made,
+      # with timestamps. Kept whether or not anything was found.
+      - name: Upload traces
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: watchtower-traces
+          path: .watchtower/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # A finding arrives as a pull request, never as a push to main. The
+      # agent acts up to the review gate and stops there.
+      - name: Open the finding as a pull request
+        if: steps.watch.outputs.findings != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$(git status --porcelain intent/)" ]; then
+            echo "Band breached but no intent written — nothing to open."
+            exit 0
+          fi
+          branch="watchtower/$(date +%Y%m%d-%H%M%S)"
+          git config user.name  'watchtower'
+          git config user.email 'watchtower@users.noreply.github.com'
+          git checkout -b "$branch"
+          git add intent/
+          git commit -m 'feat(intent): control band breach detected by watchtower'
+          git push origin "$branch"
+          gh pr create \
+            --title 'Control band breach: triage required' \
+            --body 'Raised automatically by the Maintain stage. Detection was deterministic; the diagnosis was not. Triage decides: fix now, schedule, or dismiss and retune the band.' \
+            --label from-monitoring
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '## Watchtower'
+            echo
+            sed 's/^/    /' tools/watchtower/out.log 2>/dev/null || echo 'No output.'
+          } >> "$GITHUB_STEP_SUMMARY"

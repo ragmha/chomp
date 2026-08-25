@@ -8,3 +8,5 @@ test-results/
 playwright-report/
 blob-report/
 .watchtower/
+tools/watchtower/node_modules/
+tools/watchtower/out.log

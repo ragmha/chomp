@@ -1,0 +1,86 @@
+# Control bands for the Maintain stage.
+#
+# Detection is deterministic and contains no model. A script reads the metric,
+# compares it against a rolling baseline, and only *then* decides whether to
+# invoke an agent and with what powers. Keeping the trigger dumb is the point:
+# an agent that decides when to wake itself up has no meaningful boundary.
+#
+# The tier determines what the agent may do, not how hard it thinks:
+#   1 sigma  log      record the deviation, wake nobody
+#   2 sigma  diagnose read-only investigation, write findings as intent.md
+#   3 sigma  propose  may additionally open a PR or trigger an approved runbook
+#
+# Nothing here grants production access. The agent acts up to the deploy gate
+# and stops, exactly as in the Deploy stage.
+
+metrics:
+  - name: ci_failure_rate
+    description: >-
+      Share of CI runs on main that concluded in failure. The clearest
+      early signal that the repo has become unsafe to build on.
+    source:
+      kind: github_actions
+      workflow: ci.yml
+      branch: main
+      # A real production service would read a metrics store here. With no
+      # live traffic to observe, CI health is the honest substitute — and the
+      # playbook's own third example is PR cycle time, which makes the same
+      # point about process metrics.
+    baseline:
+      window_runs: 30
+      min_samples: 8
+    rules: western_electric
+    tiers:
+      1sigma:
+        action: log
+      2sigma:
+        action: diagnose
+        tools: 'Read,Grep,Bash(gh run view *),Bash(gh run list *)'
+      3sigma:
+        action: propose
+        routes: [pull_request, runbook:quarantine-flaky-test]
+
+  - name: deploy_success_rate
+    description: >-
+      Share of Pages deployments that completed. A drop here means the
+      artefact that passed review is not reaching users.
+    source:
+      kind: github_actions
+      workflow: deploy.yml
+      branch: main
+    baseline:
+      window_runs: 20
+      min_samples: 5
+    rules: western_electric
+    tiers:
+      1sigma:
+        action: log
+      2sigma:
+        action: diagnose
+        tools: 'Read,Grep,Bash(gh run view *)'
+      3sigma:
+        action: propose
+        routes: [pull_request, runbook:rollback-deploy]
+
+# Runbooks the agent is pre-authorised to trigger at 3 sigma. Anything not
+# listed here requires a human. Each is rehearsed in staging before it is
+# trusted in anger — the playbook is explicit that rollback should be the most
+# practised path in the pipeline, not the least.
+runbooks:
+  rollback-deploy:
+    description: Redeploy the last attested-good commit to Pages.
+    command: gh workflow run deploy.yml --ref '{{last_good_sha}}'
+    requires_human: true
+
+  quarantine-flaky-test:
+    description: Skip a test that has failed non-deterministically and open an issue.
+    command: npm run test:unit -- --reporter=json
+    requires_human: true
+
+# Where a finding goes once detection fires.
+output:
+  intent_dir: intent
+  # Findings arrive as intent.md, so maintenance re-enters the same loop
+  # everything else does rather than getting a private side channel.
+  template: intent/TEMPLATE.md
+  label: from-monitoring
