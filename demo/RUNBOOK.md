@@ -230,14 +230,28 @@ Show, in order:
 > That last part has no equivalent in the playbook. It doesn't just tell you
 > you're wrong — it hands you the fix."
 
-Also worth 20 seconds:
+Also worth 30 seconds — and this one lands better than people expect:
 
 ```bash
-gh attestation verify --repo ragmha/chomp --owner ragmha dist/index.html || true
+cd /tmp && curl -sO https://ragmha.github.io/chomp/index.html
+gh attestation verify index.html --repo ragmha/chomp \
+  --format json --jq 'length | "verified: \(.) attestation(s)"'
 ```
 
-> "Cryptographic provenance for the bytes on Pages. Dependabot and Scorecard
-> cover the supply chain. The playbook doesn't address supply chain at all."
+Prints `verified: 3 attestation(s)`.
+
+> "I just downloaded the file this game is being served from, and proved
+> cryptographically that those exact bytes were built by that workflow, from
+> that commit, on GitHub's runners. Not a checksum someone wrote down — a
+> Sigstore signature.
+>
+> Dependabot and Scorecard cover the rest of the supply chain. The playbook
+> doesn't address supply chain at all."
+
+**Note the flags.** `--repo` and `--owner` are mutually exclusive — passing
+both fails. And don't append `|| true`: it hides a failure behind a green-
+looking prompt, which is exactly the wrong thing to do in front of an
+audience.
 
 ---
 
