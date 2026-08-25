@@ -24,7 +24,7 @@
     "test:e2e": "playwright test",
     "test": "npm run test:unit && npm run test:e2e",
     "verify": "npm run typecheck && npm run lint && npm test",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install || true"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
