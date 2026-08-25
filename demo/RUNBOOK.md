@@ -277,13 +277,40 @@ Click **Approve**. Watch it deploy. Reload the game.
 Show `spec/0001-chomp.md` §5, Q1 — the three-layer table.
 
 > "Session-level deny rules, which the engineer can change. A pre-commit hook,
-> which `--no-verify` defeats. And a repository ruleset plus a gated
-> environment, which nobody can switch off because GitHub enforces it
-> server-side, not a script on the laptop the agent is running on.
+> which `--no-verify` defeats — you watched me do exactly that two minutes ago.
+> And a repository ruleset plus a gated environment, which GitHub enforces
+> server-side rather than a script on the laptop the agent is running on.
 >
 > That third layer is stronger than a local hook. The honest comparison
 > happens to favour GitHub — but say the honest thing either way, because
 > someone in the room will check."
+
+Then show the ruleset:
+
+```bash
+gh api repos/ragmha/chomp/rules/branches/main --jq '[.[].type]'
+```
+
+`["deletion","non_fast_forward","pull_request","required_status_checks"]`
+
+> "No direct push to main. Every change arrives as a pull request, with a code
+> owner's approval and passing checks."
+
+**Be straight about the bypass if asked** — and it's better to volunteer it:
+
+```bash
+gh api repos/ragmha/chomp/rulesets/21450205 --jq '[.bypass_actors[].actor_type]'
+```
+
+> "Repository admins can bypass this ruleset. That's a deliberate choice, and
+> it's how most real orgs configure it — otherwise a solo maintainer locks
+> themselves out of their own repository.
+>
+> But notice what it doesn't buy you. An agent isn't an admin. And the
+> `production` environment gate you just watched has **no bypass at all** —
+> that one holds for everybody, including me. If you take one configuration
+> decision away from this: put the unbypassable gate at deploy, not at merge.
+> Merge is where you want speed. Deploy is where you want a human."
 
 ---
 
