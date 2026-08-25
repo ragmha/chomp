@@ -1,0 +1,33 @@
+# Dependabot keeps npm packages and GitHub Actions up to date automatically.
+# Minor and patch bumps are grouped into one PR per ecosystem per week to
+# reduce review noise — major version bumps still arrive individually because
+# they may need manual attention.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      # Using "ci" prefix makes action bumps easy to scan in the commit log.
+      prefix: "ci(deps)"
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch

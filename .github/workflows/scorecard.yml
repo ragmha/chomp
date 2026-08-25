@@ -1,0 +1,42 @@
+# OpenSSF Scorecard — measures supply-chain health and publishes results to
+# the code scanning dashboard so the security posture is visible in the repo.
+# Runs weekly and on every push to main.
+name: Scorecard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly on Sunday at 05:43 UTC — staggered to avoid queue spikes.
+    - cron: "43 5 * * 0"
+
+permissions:
+  contents: read
+  id-token: write        # needed to publish Scorecard results
+  security-events: write # needed to upload SARIF to code scanning
+
+jobs:
+  scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Run Scorecard
+        uses: ossf/scorecard-action@f49aabe0b5af0936a0987cfb85d86b75731b0186 # v2.4.1
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          # Publish results to the public Scorecard API so the badge works.
+          publish_results: true
+
+      # Upload SARIF so findings appear in the Security > Code scanning tab
+      # alongside CodeQL alerts — one place for all security signal.
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@fca7ace96b7d713c7035871441bd52efbe39e27e # v3.28.19
+        with:
+          sarif_file: scorecard-results.sarif
+          category: scorecard
