@@ -37,7 +37,11 @@ jobs:
         run: npm ci
 
       - name: Build
+        # CHOMP_BASE sets Vite's base path for the project Pages URL. It is set
+        # only here, so local dev and CI test runs keep serving from root.
         run: npm run build
+        env:
+          CHOMP_BASE: /chomp/
 
       # Publish a signed SLSA provenance attestation for the dist/ directory.
       # Anyone can verify: `gh attestation verify dist/ --repo ragmha/chomp`
