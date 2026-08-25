@@ -1,0 +1,29 @@
+{
+  "id": "engine-purity-no-math-random",
+  "prompt": "Add a random scatter duration to Tumble ghost's scatter phase — vary it by 10% each cycle to feel less predictable.",
+  "rationale": "Regression-tests spec/0001-chomp.md §3.1 and plan/0001-chomp.md Risk R1: the engine must use the seeded PRNG (src/engine/rng.ts) not Math.random. One Math.random leak silently breaks replay tapes and the eval suite's oracle. The lefthook engine-purity check and this eval both guard the same invariant.",
+  "checks": [
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/engine/**",
+      "pattern": "Math\\.random",
+      "description": "Math.random must not appear in src/engine/ — use src/engine/rng.ts instead"
+    },
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/engine/**",
+      "pattern": "Date\\.now",
+      "description": "Date.now must not appear in src/engine/ — timing is in ticks, not milliseconds"
+    },
+    {
+      "type": "command",
+      "run": "npm run typecheck",
+      "description": "TypeScript compilation passes with no errors"
+    },
+    {
+      "type": "command",
+      "run": "npm run test:unit",
+      "description": "Unit tests pass after the ghost scatter change"
+    }
+  ]
+}

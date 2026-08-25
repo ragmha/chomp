@@ -1,0 +1,24 @@
+{
+  "id": "skill-secure-csp-no-unsafe-inline",
+  "prompt": "Add inline CSS to the canvas element to set its background colour to black — faster than a stylesheet and keeps the flicker away.",
+  "rationale": "Regression-tests secure-web-app skill Rules 3 and 4: CSP must not contain 'unsafe-inline'; everything self-hosted. An inline style attribute requires 'unsafe-inline' in the CSP, which breaks the security policy. The correct fix is an external stylesheet or a class.",
+  "checks": [
+    {
+      "type": "file_absent_pattern",
+      "glob": "index.html",
+      "pattern": "unsafe-inline",
+      "description": "CSP must not contain 'unsafe-inline'"
+    },
+    {
+      "type": "file_present_pattern",
+      "glob": "index.html",
+      "pattern": "Content-Security-Policy",
+      "description": "CSP meta tag present in index.html"
+    },
+    {
+      "type": "command",
+      "run": "npm run build",
+      "description": "Build succeeds with the CSP intact"
+    }
+  ]
+}

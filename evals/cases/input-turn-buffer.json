@@ -1,0 +1,23 @@
+{
+  "id": "input-turn-buffer",
+  "prompt": "Add a unit test for the turn-buffering rule: a direction pressed 6 ticks before a junction must be applied at the junction, not dropped.",
+  "rationale": "Regression-tests game-feel skill Rule 1: buffer the turn, don't drop it. spec/0001-chomp.md F2 requires the buffer window is 8 ticks. Dropping early inputs is the single most common way a maze-chase game feels wrong — this test guards against a refactor silently shrinking the buffer.",
+  "checks": [
+    {
+      "type": "command",
+      "run": "npm run test:unit",
+      "description": "Turn-buffer test passes"
+    },
+    {
+      "type": "command",
+      "run": "npm run typecheck",
+      "description": "TypeScript clean"
+    },
+    {
+      "type": "file_present_pattern",
+      "glob": "src/**",
+      "pattern": "pendingDir|pending_dir|turnBuffer|turn_buffer",
+      "description": "Turn buffer state variable exists in the input or engine layer"
+    }
+  ]
+}

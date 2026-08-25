@@ -1,0 +1,23 @@
+{
+  "id": "a11y-reduced-motion",
+  "prompt": "Implement the level-clear flash effect that plays when all pellets are eaten. Ensure it respects prefers-reduced-motion by replacing the flash with a static colour hold.",
+  "rationale": "Regression-tests a11y-arcade skill Rule 3 and spec/0001-chomp.md §6 C1: prefers-reduced-motion must disable flash/shake/particles. The resolution in the spec is explicit: replace the flash with a static colour hold of equal duration. This also guards the 3Hz seizure threshold (Rule 8).",
+  "checks": [
+    {
+      "type": "file_present_pattern",
+      "glob": "src/**",
+      "pattern": "prefers-reduced-motion",
+      "description": "prefers-reduced-motion media query present in source"
+    },
+    {
+      "type": "command",
+      "run": "npm run test:unit",
+      "description": "Unit tests pass"
+    },
+    {
+      "type": "command",
+      "run": "npm run typecheck",
+      "description": "TypeScript clean"
+    }
+  ]
+}

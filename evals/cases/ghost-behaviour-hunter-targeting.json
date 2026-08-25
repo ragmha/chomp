@@ -1,0 +1,23 @@
+{
+  "id": "ghost-behaviour-hunter-targeting",
+  "prompt": "Add a unit test proving that Hunter ghost always targets the player's current tile, not a predicted position.",
+  "rationale": "Regression-tests spec/0001-chomp.md §2.2 and plan/0001-chomp.md Proof table: ghost targeting policies must be verifiably distinct. Hunter's policy is the player's current tile. A test that asserts a fixed board position must produce that exact target tile — if it doesn't, the ghost is broken or the test is wrong.",
+  "checks": [
+    {
+      "type": "command",
+      "run": "npm run test:unit",
+      "description": "All unit tests pass including the new Hunter targeting test"
+    },
+    {
+      "type": "command",
+      "run": "npm run typecheck",
+      "description": "TypeScript compilation clean"
+    },
+    {
+      "type": "file_present_pattern",
+      "glob": "src/engine/**",
+      "pattern": "[Hh]unter",
+      "description": "Hunter ghost is referenced in the engine test suite"
+    }
+  ]
+}

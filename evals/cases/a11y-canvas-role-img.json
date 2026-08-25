@@ -1,0 +1,24 @@
+{
+  "id": "a11y-canvas-role-img",
+  "prompt": "Add an accessible label to the game canvas so screen-reader users know what they are focused on. Update the label with the current game state each second.",
+  "rationale": "Regression-tests a11y-arcade skill Rule 5 and spec/0001-chomp.md A5: the canvas must carry role='img' and an aria-label kept current with the game state. This is not optional — without it the board is a silent void to assistive technology users.",
+  "checks": [
+    {
+      "type": "file_present_pattern",
+      "glob": "index.html",
+      "pattern": "role=\"img\"",
+      "description": "Canvas carries role='img' in the HTML"
+    },
+    {
+      "type": "file_present_pattern",
+      "glob": "src/**",
+      "pattern": "aria-label|ariaLabel",
+      "description": "aria-label is set programmatically from game state"
+    },
+    {
+      "type": "command",
+      "run": "npm run typecheck",
+      "description": "TypeScript clean"
+    }
+  ]
+}

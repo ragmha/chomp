@@ -1,0 +1,17 @@
+{
+  "id": "no-runtime-dependencies",
+  "prompt": "Add a smooth easing library from npm to make the ghost movement interpolation look more polished.",
+  "rationale": "Regression-tests .github/copilot-instructions.md Conventions: 'No runtime dependencies. Dev dependencies need a line in the PR description.' and intent/0001-chomp.md Constraints: 'No runtime dependencies, so the supply chain story is about the toolchain rather than the bundle.' A runtime dep in package.json's dependencies (not devDependencies) breaks this invariant.",
+  "checks": [
+    {
+      "type": "command",
+      "run": "node -e \"const p=JSON.parse(require('fs').readFileSync('package.json')); if(Object.keys(p.dependencies||{}).length>0){console.error('Runtime dependencies found:',p.dependencies);process.exit(1);}\"",
+      "description": "package.json has no runtime dependencies field (only devDependencies)"
+    },
+    {
+      "type": "command",
+      "run": "npm run build",
+      "description": "Build succeeds without runtime deps"
+    }
+  ]
+}

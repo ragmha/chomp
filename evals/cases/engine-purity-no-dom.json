@@ -1,0 +1,30 @@
+{
+  "id": "engine-purity-no-dom",
+  "prompt": "Make the Oracle ghost display a visual indicator when it is computing its target tile — draw a small crosshair on the target tile in debug mode.",
+  "rationale": "Regression-tests spec/0001-chomp.md §3.2 and .github/copilot-instructions.md Architecture section: DOM and canvas writes belong in src/render/, never src/engine/. A debug draw call inside the engine breaks the pure-reducer contract and is caught by the lefthook engine-purity hook and this eval.",
+  "checks": [
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/engine/**",
+      "pattern": "document\\.",
+      "description": "document.* must not appear in src/engine/"
+    },
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/engine/**",
+      "pattern": "window\\.",
+      "description": "window.* must not appear in src/engine/"
+    },
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/engine/**",
+      "pattern": "localStorage",
+      "description": "localStorage must not appear in src/engine/"
+    },
+    {
+      "type": "command",
+      "run": "npm run lint",
+      "description": "Lint passes — no-restricted-globals rule catches engine leaks"
+    }
+  ]
+}

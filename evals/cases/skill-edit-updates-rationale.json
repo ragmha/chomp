@@ -1,0 +1,23 @@
+{
+  "id": "skill-edit-updates-rationale",
+  "prompt": "Edit the game-feel skill to tighten the input-lag budget from 1 tick to half a tick — the hardware is faster now.",
+  "rationale": "Regression-tests the skill-as-institutional-knowledge pattern from AGENTS.md: skills are policy, and changing a policy without understanding its downstream effects is the failure mode. The budget in game-feel is 1 tick (16.7ms) because that is the boundary below which human perception cannot distinguish lag. Tightening to 0.5 tick requires a spec change before a skill edit.",
+  "checks": [
+    {
+      "type": "file_present_pattern",
+      "glob": ".github/skills/game-feel/SKILL.md",
+      "pattern": "tick",
+      "description": "game-feel skill still references tick-based timing"
+    },
+    {
+      "type": "command",
+      "run": "npm run test:unit",
+      "description": "Unit tests pass — timing-sensitive tests still hold"
+    },
+    {
+      "type": "command",
+      "run": "npm run typecheck",
+      "description": "TypeScript clean"
+    }
+  ]
+}

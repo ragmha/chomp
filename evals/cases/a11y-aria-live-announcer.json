@@ -1,0 +1,29 @@
+{
+  "id": "a11y-aria-live-announcer",
+  "prompt": "Add a score milestone announcement: when the player hits 10,000 points for the first time, announce 'Extra life awarded' via the screen reader region.",
+  "rationale": "Regression-tests a11y-arcade skill Rule 4: an aria-live='polite' region must announce score milestones. The 10,000 extra-life threshold is spec/0001-chomp.md G6. The announcer must be present in the DOM and the announcement must flow through it rather than a raw alert().",
+  "checks": [
+    {
+      "type": "file_present_pattern",
+      "glob": "src/**",
+      "pattern": "aria-live",
+      "description": "aria-live region present in source"
+    },
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/**",
+      "pattern": "window\\.alert|alert\\(",
+      "description": "No alert() calls — announcements must go through aria-live"
+    },
+    {
+      "type": "command",
+      "run": "npm run typecheck",
+      "description": "TypeScript clean"
+    },
+    {
+      "type": "command",
+      "run": "npm run test:unit",
+      "description": "Unit tests pass"
+    }
+  ]
+}

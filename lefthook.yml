@@ -1,0 +1,107 @@
+# lefthook.yml
+# Machine-level deterministic guardrail — one of three layers replacing the
+# PreToolUse hook (see spec/0001-chomp.md §5 Q1 and plan/0001-chomp.md Risks R1).
+#
+# Layer 1: CLI --deny-tool rules (per session, bypassable by the engineer)
+# Layer 2: THIS FILE — pre-commit hook (bypassable with --no-verify)
+# Layer 3: Repository ruleset + gated production environment (server-side, not bypassable)
+#
+# Install: lefthook install (run automatically via the `prepare` npm script)
+
+pre-commit:
+  parallel: false
+  commands:
+    typecheck:
+      run: npx tsc --noEmit
+      fail_text: |
+        TypeScript errors found.
+        Fix all type errors before committing — the CI typecheck step will also
+        fail and the PR will be blocked. Run `npm run typecheck` to see the full
+        list.
+
+    lint:
+      glob: "*.{ts,js}"
+      run: npx eslint {staged_files}
+      fail_text: |
+        ESLint found problems in staged files.
+        Run `npm run lint` to see all issues, or `npm run lint:fix` to auto-fix
+        what ESLint can. The CI lint step enforces the same ruleset.
+
+    engine-purity:
+      glob: "src/engine/**"
+      run: |
+        # Check staged engine files for DOM/non-determinism leaks.
+        # plan/0001-chomp.md Risk R1: one Math.random or Date.now below
+        # src/render/ silently breaks replay tapes and the eval suite's oracle.
+        STAGED_ENGINE=$(git diff --cached --name-only --diff-filter=ACM | grep '^src/engine/')
+        if [ -z "$STAGED_ENGINE" ]; then
+          exit 0
+        fi
+        VIOLATIONS=$(echo "$STAGED_ENGINE" | xargs grep -nP 'Math\.random|Date\.now|document\.|window\.|localStorage' 2>/dev/null || true)
+        if [ -n "$VIOLATIONS" ]; then
+          echo ""
+          echo "  ENGINE PURITY VIOLATION — commit blocked"
+          echo "  ─────────────────────────────────────────────────────────────────"
+          echo "  The following matches were found in src/engine/ staged files:"
+          echo ""
+          echo "$VIOLATIONS" | sed 's/^/    /'
+          echo ""
+          echo "  src/engine/ is a pure deterministic reducer. It must have no"
+          echo "  access to the DOM, the wall-clock, or unseeded randomness."
+          echo "  See: plan/0001-chomp.md Risk R1"
+          echo "       spec/0001-chomp.md §3.1 (The determinism constraint)"
+          echo ""
+          echo "  To fix:"
+          echo "    - Math.random  → use src/engine/rng.ts (seeded mulberry32 PRNG)"
+          echo "    - Date.now     → pass tick count through the state; never read the clock"
+          echo "    - document.*   → belongs in src/render/, not src/engine/"
+          echo "    - window.*     → same"
+          echo "    - localStorage → belongs in src/main.ts or a persistence layer"
+          echo ""
+          exit 1
+        fi
+      fail_text: "Engine purity check failed. See output above."
+
+    no-innerhtml:
+      glob: "src/**"
+      run: |
+        # Reject innerHTML and related APIs in any staged src/ file.
+        # secure-web-app skill Rule 1: never write markup from data.
+        # The high-score name field is the live example: scoreEl.innerHTML = name
+        # is a DOM XSS flagged as js/xss-through-dom by CodeQL.
+        STAGED_SRC=$(git diff --cached --name-only --diff-filter=ACM | grep '^src/')
+        if [ -z "$STAGED_SRC" ]; then
+          exit 0
+        fi
+        VIOLATIONS=$(echo "$STAGED_SRC" | xargs grep -nP 'innerHTML|outerHTML|insertAdjacentHTML|document\.write|\.srcdoc' 2>/dev/null || true)
+        if [ -n "$VIOLATIONS" ]; then
+          echo ""
+          echo "  DOM XSS RISK — commit blocked"
+          echo "  ─────────────────────────────────────────────────────────────────"
+          echo "  The following markup-injection APIs were found in staged src/ files:"
+          echo ""
+          echo "$VIOLATIONS" | sed 's/^/    /'
+          echo ""
+          echo "  Skill: secure-web-app Rule 1 (Never write markup from data)"
+          echo "  See: .github/skills/secure-web-app/SKILL.md"
+          echo ""
+          echo "  To fix:"
+          echo "    innerHTML  = value  →  textContent = value       (for text)"
+          echo "    innerHTML  = html   →  document.createElement()  (for structure)"
+          echo ""
+          echo "  CodeQL will flag any remaining instance as js/xss-through-dom"
+          echo "  and block the PR. Fix it here, not there."
+          echo ""
+          exit 1
+        fi
+      fail_text: "innerHTML/outerHTML/insertAdjacentHTML check failed. See output above."
+
+pre-push:
+  commands:
+    unit-tests:
+      run: npm run test:unit
+      fail_text: |
+        Unit tests failed before push.
+        Pushing broken unit tests will red the CI and block the PR.
+        Run `npm run test:unit` locally and fix all failures first.
+        If you're fixing a flaky test, run it three times to confirm stability.

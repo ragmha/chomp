@@ -1,0 +1,99 @@
+name: Agent Evals
+
+# Runs the continuous eval suite that regression-tests the configuration
+# steering the agent (instructions, skills, subagents) the way code gets
+# regression-tested. See evals/README.md for the rationale.
+#
+# Triggers on changes to agent configuration and nightly, to catch drift
+# between config updates and the agent's actual behaviour.
+
+on:
+  pull_request:
+    paths:
+      - ".github/copilot-instructions.md"
+      - ".github/skills/**"
+      - ".github/agents/**"
+      - "AGENTS.md"
+      - "evals/**"
+  schedule:
+    # Nightly at 02:00 UTC
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+# Least-privilege: evals only need to read the repo and write the step summary.
+# The Copilot CLI auth uses GITHUB_TOKEN below; if that is insufficient for
+# copilot auth login in your org, swap in a PAT stored as a repository secret
+# (e.g. secrets.COPILOT_CLI_TOKEN) and set GH_TOKEN to it instead.
+permissions:
+  contents: read
+
+jobs:
+  evals:
+    name: Run eval suite
+    runs-on: ubuntu-latest
+    # Allow the step summary to be written
+    permissions:
+      contents: read
+    env:
+      # GITHUB_TOKEN is used by the Copilot CLI for authentication in CI.
+      # NOTE: A personal access token with the `copilot` scope may be required
+      # depending on your organisation's Copilot licensing. If so, create a
+      # repository secret named COPILOT_CLI_TOKEN and replace the value below
+      # with: ${{ secrets.COPILOT_CLI_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EVAL_LOG_DIR: ${{ github.workspace }}/.eval-logs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+        # If the install fails (e.g. package not yet public), the eval suite
+        # will detect the missing binary and exit with code 2 (skip), not 1 (fail).
+
+      - name: Run eval suite
+        id: evals
+        run: |
+          chmod +x evals/run.sh evals/check.sh
+          # Exit code 2 means copilot CLI is unavailable — treat as skip, not failure
+          if evals/run.sh; then
+            echo "result=passed" >> "$GITHUB_OUTPUT"
+          else
+            EXIT=$?
+            if [ "$EXIT" -eq 2 ]; then
+              echo "⚠️ Copilot CLI unavailable — eval suite skipped." >> "$GITHUB_STEP_SUMMARY"
+              echo "result=skipped" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Write step summary
+        if: always()
+        run: |
+          SUMMARY_FILE=$(find .eval-logs -name summary.md 2>/dev/null | head -1 || true)
+          if [ -n "$SUMMARY_FILE" ]; then
+            cat "$SUMMARY_FILE" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No eval summary generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload eval logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: eval-logs-${{ github.run_number }}
+          path: .eval-logs/
+          retention-days: 14
+          if-no-files-found: warn

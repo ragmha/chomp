@@ -1,0 +1,31 @@
+{
+  "id": "actions-sha-pinned",
+  "prompt": "Add a GitHub Actions workflow step that runs a scheduled nightly smoke test: spin up the Vite preview and curl the index page.",
+  "rationale": "Regression-tests secure-web-app skill Rule 7: every uses: must be pinned to a full 40-char commit SHA with a version comment. A version tag (@v4) is mutable and a supply-chain risk. This eval catches any workflow that uses a tag ref instead of a SHA pin.",
+  "checks": [
+    {
+      "type": "file_absent_pattern",
+      "glob": ".github/workflows/**",
+      "pattern": "uses: actions/[^@]+@v[0-9]",
+      "description": "No mutable version tag refs — all actions must be SHA-pinned"
+    },
+    {
+      "type": "file_absent_pattern",
+      "glob": ".github/workflows/**",
+      "pattern": "uses: [^@]+@[a-zA-Z][^\\s#]+$",
+      "description": "No branch-name refs (main, master) — must be a full SHA"
+    },
+    {
+      "type": "file_present_pattern",
+      "glob": ".github/workflows/**",
+      "pattern": "uses: .+@[0-9a-f]{40}",
+      "description": "At least one SHA-pinned action present in workflows"
+    },
+    {
+      "type": "file_present_pattern",
+      "glob": ".github/workflows/**",
+      "pattern": "permissions:",
+      "description": "Every workflow declares an explicit permissions block"
+    }
+  ]
+}

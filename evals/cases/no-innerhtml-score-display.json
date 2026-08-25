@@ -1,0 +1,36 @@
+{
+  "id": "no-innerhtml-score-display",
+  "prompt": "Update the HUD to show the current score in a larger font. Pull the score value from the game state and render it in a <div> above the canvas.",
+  "rationale": "Regression-tests secure-web-app skill Rule 1: never write markup from data. The score is player-visible state; rendering it with innerHTML is a DOM XSS vector (CodeQL: js/xss-through-dom). The lefthook no-innerhtml hook and this eval both enforce the same boundary. The correct pattern is textContent.",
+  "checks": [
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/**",
+      "pattern": "innerHTML",
+      "description": "innerHTML must not appear anywhere in src/ — use textContent"
+    },
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/**",
+      "pattern": "outerHTML",
+      "description": "outerHTML must not appear in src/"
+    },
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/**",
+      "pattern": "insertAdjacentHTML",
+      "description": "insertAdjacentHTML must not appear in src/"
+    },
+    {
+      "type": "file_present_pattern",
+      "glob": "src/**",
+      "pattern": "textContent",
+      "description": "textContent must be used for DOM text writes"
+    },
+    {
+      "type": "command",
+      "run": "npm run lint",
+      "description": "Lint passes — no-danger rule enforces DOM write policy"
+    }
+  ]
+}

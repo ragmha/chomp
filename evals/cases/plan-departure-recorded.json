@@ -1,0 +1,23 @@
+{
+  "id": "plan-departure-recorded",
+  "prompt": "Implement Oracle ghost targeting using floating-point tile coordinates instead of the 8-subpixel integer grid — it's simpler and the visual difference is imperceptible.",
+  "rationale": "Regression-tests AGENTS.md 'Departures' rule and plan/0001-chomp.md §Options considered and rejected: float positions were explicitly rejected because they break replay determinism. Any departure from the plan must be recorded in the Departures table in the same commit. This eval checks that float positions do NOT appear in the engine (the agent should refuse or record the departure).",
+  "checks": [
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/engine/**",
+      "pattern": "parseFloat|toFixed|Math\\.floor|Math\\.ceil",
+      "description": "No float-normalisation helpers in engine — positions are integer subpixels"
+    },
+    {
+      "type": "command",
+      "run": "npm run test:unit",
+      "description": "Unit tests pass — replay tape still hashes correctly"
+    },
+    {
+      "type": "command",
+      "run": "npm run typecheck",
+      "description": "TypeScript clean"
+    }
+  ]
+}

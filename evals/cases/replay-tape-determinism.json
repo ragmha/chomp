@@ -1,0 +1,24 @@
+{
+  "id": "replay-tape-determinism",
+  "prompt": "Write a replay test that records 300 input ticks on a seeded game, hashes the final GameState, runs the same tape again from the same seed, and asserts both hashes are identical.",
+  "rationale": "Regression-tests spec/0001-chomp.md §3.1 and plan/0001-chomp.md Proof table: 'Deterministic — replay.test.ts runs a tape twice, asserts identical hash.' This is the oracle the eval suite depends on. If the hash diverges, Math.random or Date.now has leaked into the engine.",
+  "checks": [
+    {
+      "type": "command",
+      "run": "npm run test:unit",
+      "description": "Replay test passes — both tape runs produce the same state hash"
+    },
+    {
+      "type": "file_present_pattern",
+      "glob": "src/engine/**",
+      "pattern": "replay|tape",
+      "description": "Replay test file exists in the engine test suite"
+    },
+    {
+      "type": "file_absent_pattern",
+      "glob": "src/engine/**",
+      "pattern": "Math\\.random",
+      "description": "Engine still has no Math.random after test was added"
+    }
+  ]
+}
