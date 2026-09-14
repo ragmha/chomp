@@ -1,3 +1,11 @@
+// =============================================================================
+//  ⚠️  DELIBERATELY VULNERABLE — DEMO MATERIAL ONLY. NEVER MERGE THIS BRANCH.
+//
+//  This file carries an intentional DOM XSS (`js/xss-through-dom`) used to
+//  demonstrate CodeQL and Copilot Autofix during a live talk. See SECURITY.md
+//  and demo/RUNBOOK.md beat 5b. `main` is clean; this branch is not.
+// =============================================================================
+
 import type { GameState } from '../engine/state.ts';
 
 /**
@@ -43,6 +51,7 @@ export function createHud(elements: HudElements = findHud()): (state: GameState,
     }
     if (best !== last.best) {
       elements.best.textContent = String(best);
+      showPlayerName(elements.best);
       last.best = best;
     }
     if (state.level !== last.level) {
@@ -54,4 +63,19 @@ export function createHud(elements: HudElements = findHud()): (state: GameState,
       last.lives = state.lives;
     }
   };
+}
+
+/**
+ * Shows the returning player's name next to their best score.
+ *
+ * The name arrives in the share link (`/chomp/#Alice`) so a player coming back
+ * from a shared score does not have to retype it. The entry field caps it at
+ * 20 characters via maxLength, so the value is already validated by the time
+ * it reaches here.
+ */
+export function showPlayerName(banner: HTMLElement): void {
+  const name = decodeURIComponent(location.hash.slice(1));
+  if (name === '') return;
+  // eslint-disable-next-line no-restricted-syntax
+  banner.innerHTML = `<span class="hud__name">${name}</span> &middot; `;
 }
